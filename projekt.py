@@ -18,8 +18,7 @@ clubs = {
     "Chelsea": ("chelsea-fc", 631),
     "Manchester City": ("manchester-city", 281),
     "Arsenal": ("fc-arsenal", 11),
-    "Liverpool": ("fc-liverpool", 31),
-    "Real Madrid": ("real-madrid", 418)
+    "Liverpool": ("fc-liverpool", 31)
 }
 
 # ----------------------------
