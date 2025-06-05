@@ -106,22 +106,55 @@ POSITION_MAP = {
 }
 
 CLUB_TO_LEAGUE = {
-    "Real Madrid": "La Liga",
-    "Barcelona": "La Liga",
-    "Manchester United": "Premier League",
-    "Manchester City": "Premier League",
-    "Chelsea": "Premier League",
-    "Arsenal": "Premier League",
-    "Liverpool": "Premier League",
+    # Bundesliga
     "Bayern Munich": "Bundesliga",
     "Borussia Dortmund": "Bundesliga",
+    "RB Leipzig": "Bundesliga",
+    "Bayer 04 Leverkusen": "Bundesliga",
+    "Eintracht Frankfurt": "Bundesliga",
+
+    # Campeonato Brasileiro Série A
+    "Sociedade Esportiva Palmeiras": "Campeonato Brasileiro Série A",
+
+    # La Liga
+    "Real Madrid": "La Liga",
+    "FC Barcelona": "La Liga",
+    "Atlético de Madrid": "La Liga",
+    "Villarreal CF": "La Liga",
+    "Real Sociedad": "La Liga",
+    "Athletic Bilbao": "La Liga",
+
+    # Ligue 1
     "Paris Saint-Germain": "Ligue 1",
-    "Juventus": "Serie A",
+
+    # Premier League
+    "Manchester United": "Premier League",
+    "Manchester City": "Premier League",
+    "Chelsea FC": "Premier League",
+    "Arsenal FC": "Premier League",
+    "Liverpool FC": "Premier League",
+    "Newcastle United": "Premier League",
+    "Tottenham Hotspur": "Premier League",
+    "Brighton & Hove Albion": "Premier League",
+    "Everton FC": "Premier League",
+    "Brentford FC": "Premier League",
+    "Crystal Palace": "Premier League",
+    "Aston Villa": "Premier League",
+    "Nottingham Forest": "Premier League",
+    "Wolverhampton Wanderers": "Premier League",
+
+    # Primeira Liga
+    "FC Porto": "Primeira Liga",
+    "Sporting CP": "Primeira Liga",
+
+    # Serie A
+    "Juventus FC": "Serie A",
     "AC Milan": "Serie A",
     "Inter Milan": "Serie A",
-    "Atletico Madrid": "La Liga",
-    "Real Madrid": "La Liga",
-    "Newcastle United": "Premier League",
+    "Atalanta BC": "Serie A",
+
+    # Süper Lig
+    "Galatasaray": "Süper Lig",
 }
 
 def convert_market_value(mv_string):
