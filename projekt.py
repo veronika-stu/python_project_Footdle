@@ -105,6 +105,25 @@ POSITION_MAP = {
     "Second Striker": "CF",
 }
 
+CLUB_TO_LEAGUE = {
+    "Real Madrid": "La Liga",
+    "Barcelona": "La Liga",
+    "Manchester United": "Premier League",
+    "Manchester City": "Premier League",
+    "Chelsea": "Premier League",
+    "Arsenal": "Premier League",
+    "Liverpool": "Premier League",
+    "Bayern Munich": "Bundesliga",
+    "Borussia Dortmund": "Bundesliga",
+    "Paris Saint-Germain": "Ligue 1",
+    "Juventus": "Serie A",
+    "AC Milan": "Serie A",
+    "Inter Milan": "Serie A",
+    "Atletico Madrid": "La Liga",
+    "Real Madrid": "La Liga",
+    "Newcastle United": "Premier League",
+}
+
 def convert_market_value(mv_string):
     mv_string = mv_string.replace('€', '').replace(',', '').strip().lower()
     if mv_string.endswith('m'):
@@ -112,6 +131,7 @@ def convert_market_value(mv_string):
         return int(num) if num.is_integer() else num
     return None
 
+@st.cache_data(ttl=3600)
 def get_players2():
     headers = {'User-Agent': 'Mozilla/5.0'}
     base_url = "https://www.transfermarkt.com/spieler-statistik/wertvollstespieler/marktwertetop"
@@ -133,14 +153,17 @@ def get_players2():
                 position_short = POSITION_MAP.get(position, position)
                 country_img = tds[6].find("img")
                 country = country_img["title"] if country_img else ""
-                club_img = tds[7].find("img")
-                club = club_img["alt"] if club_img else ""
+                club_img = tds[7].find("img") 
+                club = club_img["alt"] if club_img else "" 
+                league = CLUB_TO_LEAGUE.get(club, "Unknown")
+
                 data.append({
                     "Name": name,
                     "Position": position_short,
                     "Age": age,
                     "Country": country,
                     "Club": club,
+                    "League": league,
                     "Market Value (€ mil.)": market_value
                 })
     df = pd.DataFrame(data)
@@ -154,7 +177,7 @@ if 'page' not in st.session_state:
     st.session_state.page = 'Home'
 
 with st.sidebar:
-    st.title("Navi")
+    st.title("Navigation")
     if st.button("Home"):
         st.session_state.page = 'Home'
     if st.button("Stats"):
@@ -169,7 +192,29 @@ with st.sidebar:
 # ----------------------------
 if st.session_state.page == 'Home':
     st.title("Welcome to the Football App")
-    st.write("Use the sidebar to navigate!")
+    st.markdown("---")
+    st.markdown("""
+        Welcome to the ultimate hub for football lovers!  
+        Explore club stats, player profiles, or play our football-themed guessing game.
+        Whether you're a die-hard fan or just curious about the beautiful game, there's something here for everyone.
+                
+
+        Use the navigation bar on the left or choose an option below to get started:
+    """)
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        if st.button("View Player Stats"):
+            st.session_state.page = "Stats"
+    with col2:
+        if st.button("Explore Players"):
+            st.session_state.page = "Players"
+    with col3:
+        if st.button("Play FootDle"):
+            st.session_state.page = "FootDle"
+    
+
+    
 
 # ----------------------------
 # Stats Page
@@ -228,7 +273,7 @@ elif st.session_state.page == 'FootDle':
         player_df = st.session_state.get("footdle_player_df", get_players2())
         player_names = player_df["Name"].tolist()
 
-        col1, col2 = st.columns([4, 1])
+        col1, col2, col3, col4 = st.columns([4, 1, 1,1])
         with col1:
             guess = st.selectbox(
                 "Type or pick a player's name:",
@@ -236,25 +281,64 @@ elif st.session_state.page == 'FootDle':
                 key="footdle_select"
             )
         with col2:
-            # Button is always visible
+            st.markdown("<div style='margin-top: 32px;'>", unsafe_allow_html=True)
             if st.button("Guess"):
                 if guess and guess not in st.session_state.footdle_guesses:
                     st.session_state.footdle_guesses.append(guess)
+        with col3:
+            st.markdown("<div style='margin-top: 32px;'>", unsafe_allow_html=True)
+            if st.button("Give Up"):
+                answer = st.session_state.footdle_secret["Name"] if st.session_state.footdle_secret else "unknown"
+                st.session_state.footdle_started = False
+                st.session_state.footdle_secret = None
+                st.session_state.footdle_guesses = []
+                st.markdown(
+                    f"""
+                    <div style="
+                        width:70vw;
+                        margin-left: calc(-50vw + 50%);
+                        margin-top: 20px;
+                        background: #253347;
+                        color: #fff;
+                        font-size: 1.3em;
+                        padding: 24px 0;
+                        border-radius: 18px;
+                        font-weight: bold;
+                        text-align: center;
+                        letter-spacing: 0.01em;
+                        box-shadow: 0 8px 32px rgba(0,0,0,0.13);
+                    ">
+                        😴 You gave up! The answer was: <span style="color:#1be7b7">{answer}</span><br>
+                        <span style="font-size:0.85em; color:#b2b8c2; font-weight:normal;">Who is that? Check our player desc!
+                        </span>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+      
+        with col4:
+            st.markdown("<div style='margin-top: 32px;'>", unsafe_allow_html=True)
+            if st.button("Restart"):
+                st.session_state.footdle_started = False
+                st.session_state.footdle_secret = None
+                st.session_state.footdle_guesses = []
+            
 
         secret = st.session_state.footdle_secret
 
         # Headers row (always visible, one row at the top)
         headers_html = """
-        <div style="display:grid;grid-template-columns:160px repeat(5, 120px);gap:18px;margin-bottom:2px;">
+        <div style="display:grid;grid-template-columns:160px repeat(6, 120px);gap:18px;margin-bottom:2px;">
             <div></div>
             <div style="text-align:center;font-weight:bold;">POSITION</div>
             <div style="text-align:center;font-weight:bold;">AGE</div>
             <div style="text-align:center;font-weight:bold;">COUNTRY</div>
             <div style="text-align:center;font-weight:bold;">CLUB</div>
+            <div style="text-align:center;font-weight:bold;">LEAGUE</div>
             <div style="text-align:center;font-weight:bold;">VALUE (€ mil.) </div>
         </div>
         """
-        st.markdown(headers_html, unsafe_allow_html=True)
+        st.markdown(f"""<div style='display: flex; justify-content: center;'>{headers_html}</div>""", unsafe_allow_html=True)
 
         # --- Show guess boxes for each attempt ---
         arrow_up_svg = f"""
@@ -272,6 +356,7 @@ elif st.session_state.page == 'FootDle':
                 "Age": guess_row["Age"] == secret["Age"],
                 "Country": guess_row["Country"] == secret["Country"],
                 "Club": guess_row["Club"] == secret["Club"],
+                "League": guess_row["League"] == secret["League"],
                 "Market Value (€ mil.)": guess_row["Market Value (€ mil.)"] == secret["Market Value (€ mil.)"]
             }
             values = {
@@ -279,6 +364,7 @@ elif st.session_state.page == 'FootDle':
                 "Age": guess_row["Age"],
                 "Country": guess_row["Country"],
                 "Club": guess_row["Club"],
+                "League": guess_row["League"],
                 "Market Value (€ mil.)": guess_row["Market Value (€ mil.)"]
             }
 
@@ -305,8 +391,8 @@ elif st.session_state.page == 'FootDle':
 
             # Use grid for alignment, name in first cell only (not inside a box)
             html = f"""
-            <div style="display:grid;grid-template-columns:160px repeat(5, 120px);gap:18px;align-items:center;margin-bottom:10px;">
-                <div style="font-weight:bold;font-size:1.1em;color:white;letter-spacing:1px;">{guessed_name}</div>
+            <div style="display:grid;grid-template-columns:160px repeat(6, 120px);gap:18px;align-items:center;margin-bottom:10px;">
+                <div style="font-weight:bold;font-size:1.1em;color:b2b8c2;letter-spacing:1px;">{guessed_name}</div>
                 <div style="border:6px solid black; background:{get_bg('Position')}; border-radius:7px; height:90px;display:flex;align-items:center;justify-content:center;font-size:2em;">{values['Position']}</div>
                 <div style="border:6px solid black; background:{get_bg('Age')}; border-radius:7px; height:90px;display:flex;align-items:center;justify-content:center;font-size:2em;position:relative;">
                     <span>{values['Age']}</span>
@@ -314,34 +400,47 @@ elif st.session_state.page == 'FootDle':
                 </div>
                 <div style="border:6px solid black; background:{get_bg('Country')}; border-radius:7px; height:90px;display:flex;align-items:center;justify-content:center;font-size:1.4em;">{values['Country']}</div>
                 <div style="border:6px solid black; background:{get_bg('Club')}; border-radius:7px; height:90px;display:flex;align-items:center;justify-content:center;white-space:normal;text-align:center;font-size:1.2em;">{values['Club']}</div>
+                <div style="border:6px solid black; background:{get_bg('League')}; border-radius:7px; height:90px;display:flex;align-items:center;justify-content:center;white-space:normal;text-align:center;font-size:1.2em;">{values['League']}</div>
                 <div style="border:6px solid black; background:{get_bg('Market Value (€ mil.)')}; border-radius:7px; height:90px;display:flex;align-items:center;justify-content:center;font-size:2em;position:relative;">
                     <span>{values['Market Value (€ mil.)']}</span>
                     <span style="margin-left:8px;">{mv_arrow}</span>
                 </div>
             </div>
             """
-            st.markdown(html, unsafe_allow_html=True)
+            st.markdown(f"""<div style='display: flex; justify-content: center;'>{html}</div>""", unsafe_allow_html=True)
 
             # Win condition
             if all(correct.values()):
-                st.success(f"🎉 YOU WIN! THE PLAYER WAS **{secret['Name']}**!")
+                st.markdown(
+                    f"""
+                    <div style="
+                        width:70vw;
+                        margin-left: calc(-50vw + 50%);
+                        margin-top: 20px;
+                        background: #18b87a;
+                        color: #fff;
+                        font-size: 1.3em;
+                        padding: 24px 0;
+                        border-radius: 18px;
+                        font-weight: bold;
+                        text-align: center;
+                        letter-spacing: 0.01em;
+                        box-shadow: 0 8px 32px rgba(0,0,0,0.13);
+                    ">
+                        🎉 <span style="font-size:1.1em;">YOU WIN! The player was:</span>
+                        <span style="color:#fff700">{secret['Name']}</span><br>
+                        <span style="font-size:0.85em; color:#eeeeee; font-weight:normal;">
+                            Try another round or check the player’s stats!
+                        </span>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
                 st.session_state.footdle_started = False
                 break
 
-        # ---- Below the guesses table ----
-        col_restart, col_giveup = st.columns([1, 1])
-        with col_restart:
-            if st.button("Restart"):
-                st.session_state.footdle_started = False
-                st.session_state.footdle_secret = None
-                st.session_state.footdle_guesses = []
-        with col_giveup:
-            if st.button("Give Up"):
-                answer = st.session_state.footdle_secret["Name"] if st.session_state.footdle_secret else "unknown"
-                st.info(f"😴 You gave up! The answer was: **{answer}**")
-                st.session_state.footdle_started = False
-                st.session_state.footdle_secret = None
-                st.session_state.footdle_guesses = []
+
+
 # ----------------------------
 # Players Page
 # ----------------------------
