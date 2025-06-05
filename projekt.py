@@ -12,16 +12,6 @@ import warnings as warnings
 import time
 
 
-# ------------------------------------------
-# Define multiple clubs with their slugs & IDs
-# ------------------------------------------
-clubs = {
-    "Chelsea": ("chelsea-fc", 631),
-    "Manchester City": ("manchester-city", 281),
-    "Arsenal": ("fc-arsenal", 11),
-    "Liverpool": ("fc-liverpool", 31)
-}
-
 # ----------------------------
 # Get player image from Wikipedia
 # ----------------------------
@@ -40,53 +30,6 @@ def get_wikipedia_image(player_name):
                 return "https:" + img['src']
     except Exception:
         return None
-
-# ----------------------------
-# Scraping function with caching
-# ----------------------------
-@st.cache_data(ttl=3600)
-def get_players(club_slug, club_id, club_name):
-    url = f"https://www.transfermarkt.com/{club_slug}/startseite/verein/{club_id}"
-    headers = {
-        "User-Agent": "Mozilla/5.0",
-        "Accept-Language": "en-US,en;q=0.9",
-    }
-
-    response = requests.get(url, headers=headers)
-    soup = BeautifulSoup(response.text, "html.parser")
-    table = soup.find("table", class_="items")
-    players = {}
-
-    if table:
-        rows = table.find_all("tr", class_=["odd", "even"])
-        for row in rows[:15]:  # Limit to 15 players
-            try:
-                name = row.find("td", class_="hauptlink").a.text.strip()
-
-                tds = row.find_all("td")
-                position = tds[4].text.strip()
-                age = tds[5].text.strip()
-                market_value = tds[-1].text.strip()
-
-                nationality_img = tds[6].find("img")
-                nationality = nationality_img["title"] if nationality_img else "Unknown"
-
-                img_url = get_wikipedia_image(name)
-
-                players[name] = {
-                    "Date of Birth (Age)": age,
-                    "Country of Birth": nationality,
-                    "Position": position,
-                    "Market Value": market_value,
-                    "Club": club_name,
-                    "Image": img_url
-                }
-            except Exception as e:
-                print("Error with row:", e)
-                continue
-
-    return players
-
 
 # ----------------------------
 # Players scrape
@@ -213,16 +156,17 @@ with st.sidebar:
     st.title("Navigation")
     if st.button("Home"):
         st.session_state.page = 'Home'
-    if st.button("Stats"):
-        st.session_state.page = 'Stats'
+    if st.button("Player Info"):
+        st.session_state.page = 'Player Info'
     if st.button('FootDle'):
         st.session_state.page = 'FootDle'
-    if st.button("Players"): 
-        st.session_state.page = 'Players'
+    if st.button("Players List"): 
+        st.session_state.page = 'Players List'
 
 # ----------------------------
 # Home Page
 # ----------------------------
+
 if st.session_state.page == 'Home':
     st.title("Welcome to the Football App")
     st.markdown("---")
@@ -237,11 +181,11 @@ if st.session_state.page == 'Home':
 
     col1, col2, col3 = st.columns(3)
     with col1:
-        if st.button("View Player Stats"):
-            st.session_state.page = "Stats"
+        if st.button("View Player Info"):
+            st.session_state.page = "Player Info"
     with col2:
-        if st.button("Explore Players"):
-            st.session_state.page = "Players"
+        if st.button("Explore Players List"):
+            st.session_state.page = "Players List"
     with col3:
         if st.button("Play FootDle"):
             st.session_state.page = "FootDle"
@@ -250,34 +194,36 @@ if st.session_state.page == 'Home':
     
 
 # ----------------------------
-# Stats Page
+# Player Info Page
 # ----------------------------
-elif st.session_state.page == 'Stats':
-    st.title("Football Player Stats")
+elif st.session_state.page == 'Player Info':
+    st.title("Football Player Statistics")
 
-    club_choice = st.selectbox("Choose a club", list(clubs.keys()))
-    club_slug, club_id = clubs[club_choice]
+    df = get_players2()
+    player_names = sorted(df["Name"].tolist())
+    player_choice = st.selectbox("Choose a player:", player_names)
 
-    players = get_players(club_slug, club_id, club_choice)
+    
+    player_row = df[df["Name"] == player_choice].iloc[0]
 
-    if players:
-        player_choice = st.selectbox("Choose a player", list(players.keys()))
-        player_data = players[player_choice]
+    REV_POSITION_MAP = {v: k for k, v in POSITION_MAP.items()}
+    full_position = REV_POSITION_MAP.get(player_row["Position"], player_row["Position"])
 
-        st.subheader(f"{player_choice}")
-        col1, col2 = st.columns([1, 2])
-
-        with col1:
-            if player_data.get("Image"):
-                st.image(player_data["Image"], width=200)
-            else:
-                st.write("No image found.")
-
-        with col2:
-            for key in ["Date of Birth (Age)", "Country of Birth", "Position","Market Value", "Club"]:
-                st.write(f"**{key}**: {player_data[key]}")
-    else:
-        st.error("Could not load player data.")
+    col1, col2 = st.columns([1, 2])
+    with col1:
+        img_url = get_wikipedia_image(player_choice)
+        if img_url:
+            st.image(img_url, width=220)
+        else:
+            st.write("No photo available.")
+    with col2:
+        st.markdown(f"**Name:** {player_row['Name']}")
+        st.markdown(f"**Age:** {player_row['Age']}")
+        st.markdown(f"**Club:** {player_row['Club']}")
+        st.markdown(f"**League:** {player_row['League']}")
+        st.markdown(f"**Country:** {player_row['Country']}")
+        st.markdown(f"**Position:** {full_position}")
+        st.markdown(f"**Market Value:** €{player_row['Market Value (€ mil.)']}m")
 
 # ----------------------------
 # Footdle Page
@@ -359,7 +305,7 @@ elif st.session_state.page == 'FootDle':
 
         secret = st.session_state.footdle_secret
 
-        # Headers row (always visible, one row at the top)
+        # Headers row
         headers_html = """
         <div style="display:grid;grid-template-columns:160px repeat(6, 120px);gap:18px;margin-bottom:2px;">
             <div></div>
@@ -373,7 +319,7 @@ elif st.session_state.page == 'FootDle':
         """
         st.markdown(f"""<div style='display: flex; justify-content: center;'>{headers_html}</div>""", unsafe_allow_html=True)
 
-        # --- Show guess boxes for each attempt ---
+        
         arrow_up_svg = f"""
         <svg width="28" height="28" style="vertical-align:middle;opacity:0.7;" viewBox="0 0 16 16"><path fill="black" d="M8 4l4 8H4z"/></svg>
         """
@@ -381,7 +327,7 @@ elif st.session_state.page == 'FootDle':
         <svg width="28" height="28" style="vertical-align:middle;opacity:0.7;transform: rotate(180deg);" viewBox="0 0 16 16"><path fill="black" d="M8 4l4 8H4z"/></svg>
         """
 
-        # ... (inside your guess loop)
+        
         for idx, guessed_name in enumerate(reversed(st.session_state.footdle_guesses)):
             guess_row = player_df[player_df["Name"] == guessed_name].iloc[0]
             correct = {
@@ -422,7 +368,7 @@ elif st.session_state.page == 'FootDle':
             age_arrow = arrow_html(values["Age"], secret["Age"], correct["Age"])
             mv_arrow = arrow_html(values["Market Value (€ mil.)"], secret["Market Value (€ mil.)"], correct["Market Value (€ mil.)"])
 
-            # Use grid for alignment, name in first cell only (not inside a box)
+            
             html = f"""
             <div style="display:grid;grid-template-columns:160px repeat(6, 120px);gap:18px;align-items:center;margin-bottom:10px;">
                 <div style="font-weight:bold;font-size:1.1em;color:b2b8c2;letter-spacing:1px;">{guessed_name}</div>
@@ -476,7 +422,7 @@ elif st.session_state.page == 'FootDle':
 # ----------------------------
 # Players Page
 # ----------------------------
-elif st.session_state.page == 'Players':
+elif st.session_state.page == 'Players List':
     st.title("Top 100 Most Valuable Players")
     df = get_players2()
     st.dataframe(df, hide_index=True)
