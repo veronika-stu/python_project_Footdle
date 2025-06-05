@@ -296,7 +296,7 @@ elif st.session_state.page == 'FootDle':
                     f"""
                     <div style="
                         width:70vw;
-                        margin-left: calc(-50vw + 50%);
+                        margin-left: calc(-47vw + 50%);
                         margin-top: 20px;
                         background: #253347;
                         color: #fff;
@@ -349,7 +349,7 @@ elif st.session_state.page == 'FootDle':
         """
 
         # ... (inside your guess loop)
-        for idx, guessed_name in enumerate(st.session_state.footdle_guesses):
+        for idx, guessed_name in enumerate(reversed(st.session_state.footdle_guesses)):
             guess_row = player_df[player_df["Name"] == guessed_name].iloc[0]
             correct = {
                 "Position": guess_row["Position"] == secret["Position"],
@@ -415,7 +415,7 @@ elif st.session_state.page == 'FootDle':
                     f"""
                     <div style="
                         width:70vw;
-                        margin-left: calc(-50vw + 50%);
+                        margin-left: calc(-20vw);
                         margin-top: 20px;
                         background: #18b87a;
                         color: #fff;
@@ -427,8 +427,7 @@ elif st.session_state.page == 'FootDle':
                         letter-spacing: 0.01em;
                         box-shadow: 0 8px 32px rgba(0,0,0,0.13);
                     ">
-                        🎉 <span style="font-size:1.1em;">YOU WIN! The player was:</span>
-                        <span style="color:#fff700">{secret['Name']}</span><br>
+                        🎉 YOU WIN! The player was: <span style="color:#fff700">{secret['Name']}</span><br>
                         <span style="font-size:0.85em; color:#eeeeee; font-weight:normal;">
                             Try another round or check the player’s stats!
                         </span>
