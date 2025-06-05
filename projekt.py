@@ -108,7 +108,7 @@ def convert_market_value(mv_string):
     return None
 
 @st.cache_data(ttl=3600)
-def get_players2():
+def get_players():
     headers = {'User-Agent': 'Mozilla/5.0'}
     base_url = "https://www.transfermarkt.com/spieler-statistik/wertvollstespieler/marktwertetop"
     data = []
@@ -199,7 +199,7 @@ if st.session_state.page == 'Home':
 elif st.session_state.page == 'Player Info':
     st.title("Football Player Statistics")
 
-    df = get_players2()
+    df = get_players()
     player_names = sorted(df["Name"].tolist())
     player_choice = st.selectbox("Choose a player:", player_names)
 
@@ -241,16 +241,17 @@ elif st.session_state.page == 'FootDle':
 
     if not st.session_state.footdle_started:
         if st.button("Start"):
-            player_df = get_players2()
+            player_df = get_players()
             st.session_state.footdle_player_df = player_df
             secret_row = player_df.sample(1).iloc[0]
             st.session_state.footdle_secret = secret_row.to_dict()
             st.session_state.footdle_guesses = []
             st.session_state.footdle_started = True
+        st.stop()
 
     if st.session_state.footdle_started:
-        player_df = st.session_state.get("footdle_player_df", get_players2())
-        player_names = player_df["Name"].tolist()
+        player_df = st.session_state.get("footdle_player_df", get_players())
+        player_names = sorted(player_df["Name"].tolist())
 
         col1, col2, col3, col4 = st.columns([4, 1, 1,1])
         with col1:
@@ -424,6 +425,6 @@ elif st.session_state.page == 'FootDle':
 # ----------------------------
 elif st.session_state.page == 'Players List':
     st.title("Top 100 Most Valuable Players")
-    df = get_players2()
+    df = get_players()
     st.dataframe(df, hide_index=True)
 
