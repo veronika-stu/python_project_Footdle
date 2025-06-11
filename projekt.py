@@ -9,6 +9,7 @@ import streamlit as st
 import wikipedia
 import warnings as warnings
 import time
+import numpy as np
 
 # ----------------------------
 # Get player image from Wikipedia
@@ -480,40 +481,71 @@ elif st.session_state.page == 'FootDle':
             guess = st.selectbox("Your guess:", [""] + player_names, key="footdle_select_computer")
             if st.session_state.footdle_started:
                 if st.button("Guess"):
-                    if guess and guess not in st.session_state.footdle_guesses:
+                    if guess and guess not in st.session_state.footdle_guesses and not st.session_state.footdle_win_message:
                         # --- Add user guess ---
                         st.session_state.footdle_guesses.append(guess)
-
-                        # --- Give feedback to bot (filter its choices) ---
-                        last_guess_row = player_df[player_df["Name"] == guess].iloc[0]
                         secret = st.session_state.footdle_secret
-                        feedback = {
-                            "Position": last_guess_row["Position"] == secret["Position"],
-                            "Age": last_guess_row["Age"] == secret["Age"],
-                            "Country": last_guess_row["Country"] == secret["Country"],
-                            "Club": last_guess_row["Club"] == secret["Club"],
-                            "League": last_guess_row["League"] == secret["League"],
-                            "Market Value (€ mil.)": last_guess_row["Market Value (€ mil.)"] == secret["Market Value (€ mil.)"]
-                        }
-                        filtered = st.session_state.footdle_bot_possible.copy()
-                        for col, is_correct in feedback.items():
-                            if is_correct:
-                                filtered = filtered[filtered[col] == secret[col]]
-                        filtered = filtered[~filtered["Name"].isin(st.session_state.footdle_bot_guesses)]
-                        st.session_state.footdle_bot_possible = filtered
 
-                        # --- Bot makes a guess ---
-                        if len(filtered) > 0:
-                            bot_guess = filtered.sample(1).iloc[0]["Name"]
-                            st.session_state.footdle_bot_guesses.append(bot_guess)
-
-                        # --- Win logic ---
+                        # --- Check if user wins
                         if guess == secret["Name"]:
                             st.session_state.footdle_win_message = "user"
                             st.session_state.footdle_started = False
-                        elif bot_guess == secret["Name"]:
-                            st.session_state.footdle_win_message = "bot"
-                            st.session_state.footdle_started = False
+
+                        # --- Bot's Turn: Guess using only its own past feedback
+                        # 1. On first turn, bot_possible is all players
+                        if st.session_state.footdle_bot_possible is None or len(st.session_state.footdle_bot_guesses) == 0:
+                            bot_possible = player_df.copy()
+                        else:
+                            bot_possible = st.session_state.footdle_bot_possible.copy()
+
+                        # 2. Remove already guessed
+                        bot_possible = bot_possible[~bot_possible["Name"].isin(st.session_state.footdle_bot_guesses)]
+
+                        # 3. Make a guess if possible, but "contaminate" possible set with 25% random wrong players
+                        if len(bot_possible) > 0:
+                            # Get feedback for bot's last guess if exists (bot is making next guess based on previous guess)
+                            if len(st.session_state.footdle_bot_guesses) > 0:
+                                last_bot_guess_row = player_df[player_df["Name"] == st.session_state.footdle_bot_guesses[-1]].iloc[0]
+                                feedback = {
+                                    "Position": last_bot_guess_row["Position"] == secret["Position"],
+                                    "Age": last_bot_guess_row["Age"] == secret["Age"],
+                                    "Country": last_bot_guess_row["Country"] == secret["Country"],
+                                    "Club": last_bot_guess_row["Club"] == secret["Club"],
+                                    "League": last_bot_guess_row["League"] == secret["League"],
+                                    "Market Value (€ mil.)": last_bot_guess_row["Market Value (€ mil.)"] == secret["Market Value (€ mil.)"]
+                                }
+                                # Filter strictly
+                                for col, is_correct in feedback.items():
+                                    if is_correct:
+                                        bot_possible = bot_possible[bot_possible[col] == secret[col]]
+
+                            # Now contaminate the bot's pool
+                            n_extra = max(1, int(0.25 * len(bot_possible)))
+                            all_possible_names = set(player_df["Name"].tolist())
+                            current_possible_names = set(bot_possible["Name"].tolist())
+                            already_guessed = set(st.session_state.footdle_bot_guesses)
+                            excluded_names = current_possible_names | already_guessed
+
+                            false_positives_df = player_df[~player_df["Name"].isin(excluded_names)]
+                            if len(false_positives_df) > 0:
+                                add_df = false_positives_df.sample(n=min(n_extra, len(false_positives_df)))
+                                bot_possible = pd.concat([bot_possible, add_df], ignore_index=True)
+
+                            # Remove duplicates just in case
+                            bot_possible = bot_possible.drop_duplicates(subset="Name").reset_index(drop=True)
+
+                            # --- Pick random guess from contaminated pool
+                            bot_guess_row = bot_possible.sample(1).iloc[0]
+                            bot_guess = bot_guess_row["Name"]
+                            st.session_state.footdle_bot_guesses.append(bot_guess)
+
+                            # Store the contaminated pool for next round
+                            st.session_state.footdle_bot_possible = bot_possible
+
+                            # --- Bot win logic
+                            if bot_guess == secret["Name"]:
+                                st.session_state.footdle_win_message = "bot"
+                                st.session_state.footdle_started = False
 
 
                 # --- Display user guesses grid ---
@@ -558,37 +590,19 @@ elif st.session_state.page == 'FootDle':
             for bot_guess in reversed(st.session_state.footdle_bot_guesses):
                 guess_row = player_df[player_df["Name"] == bot_guess].iloc[0]
                 secret = st.session_state.footdle_secret
-                correct = {
-                    "Position": guess_row["Position"] == secret["Position"],
-                    "Age": guess_row["Age"] == secret["Age"],
-                    "Country": guess_row["Country"] == secret["Country"],
-                    "Club": guess_row["Club"] == secret["Club"],
-                    "League": guess_row["League"] == secret["League"],
-                    "Market Value (€ mil.)": guess_row["Market Value (€ mil.)"] == secret["Market Value (€ mil.)"]
-                }
-                values = {
-                    "Position": guess_row["Position"],
-                    "Age": guess_row["Age"],
-                    "Country": guess_row["Country"],
-                    "Club": guess_row["Club"],
-                    "League": guess_row["League"],
-                    "Market Value (€ mil.)": guess_row["Market Value (€ mil.)"]
-                }
-                def get_bg(col):
-                    return "#3dcc4a" if correct[col] else "#df2222"
-                html = f"""
-                <div style="display:grid;grid-template-columns:120px repeat(6, 70px);gap:8px;align-items:center;margin-bottom:4px;">
-                    <div style="font-weight:bold;font-size:1.05em;">{bot_guess}</div>
-                    <div style="background:{get_bg('Position')}; border-radius:7px; height:35px;display:flex;align-items:center;justify-content:center;">{values['Position']}</div>
-                    <div style="background:{get_bg('Age')}; border-radius:7px; height:35px;display:flex;align-items:center;justify-content:center;">{values['Age']}</div>
-                    <div style="background:{get_bg('Country')}; border-radius:7px; height:35px;display:flex;align-items:center;justify-content:center;">{values['Country']}</div>
-                    <div style="background:{get_bg('Club')}; border-radius:7px; height:35px;display:flex;align-items:center;justify-content:center;">{values['Club']}</div>
-                    <div style="background:{get_bg('League')}; border-radius:7px; height:35px;display:flex;align-items:center;justify-content:center;">{values['League']}</div>
-                    <div style="background:{get_bg('Market Value (€ mil.)')}; border-radius:7px; height:35px;display:flex;align-items:center;justify-content:center;">{values['Market Value (€ mil.)']}</div>
-                </div>
-                """
-                st.markdown(html, unsafe_allow_html=True)
-
+                correct = [
+                    guess_row["Position"] == secret["Position"],
+                    guess_row["Age"] == secret["Age"],
+                    guess_row["Country"] == secret["Country"],
+                    guess_row["Club"] == secret["Club"],
+                    guess_row["League"] == secret["League"],
+                    guess_row["Market Value (€ mil.)"] == secret["Market Value (€ mil.)"]
+                ]
+                n_correct = sum(correct)
+                st.markdown(
+                    f"<div style='font-weight:bold;font-size:1.1em;margin-bottom:7px;'>{bot_guess} <span style='color:#1be7b7;font-weight:normal;'>({n_correct}/6)</span></div>",
+                    unsafe_allow_html=True
+                )
         # --- WIN/LOSE MESSAGES ---
         if st.session_state.footdle_win_message == "user":
             st.markdown(
