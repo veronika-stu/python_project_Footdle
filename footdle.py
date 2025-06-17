@@ -74,6 +74,9 @@ def footdle_page():
             """, unsafe_allow_html=True) 
 
 
+        st.markdown("---")
+        st.markdown("*Tip: For the best experience, hide the sidebar by clicking the arrow in the top right.*")
+
         st.stop()
 
 
@@ -301,6 +304,7 @@ def footdle_page():
 
         if not st.session_state.footdle_started:
             if st.button("Start 1v1"):
+                st.session_state.footdle_win_message = None
                 player_df = get_players()
                 st.session_state.footdle_player_df = player_df
                 secret_row = player_df.sample(1).iloc[0]
@@ -315,15 +319,19 @@ def footdle_page():
         player_df = st.session_state.footdle_player_df
         player_names = sorted(player_df["Name"].tolist())
 
-        user_win = False
-        bot_win = False
 
-        st.markdown("### Your turn")
-        guess = st.selectbox("Your guess:", [""] + player_names, key="footdle_select_computer")
-        if st.session_state.footdle_started:
+        col_drop, col_guess,col_restart = st.columns([4, 1, 1])
+        with col_drop:
+            guess = st.selectbox("Type or pick a player's name:", [""] + player_names, key="footdle_select_computer")
+
+
+        with col_guess:
+            st.markdown("<div style='margin-top: 32px;'>", unsafe_allow_html=True)
             if st.button("Guess"):
-                if guess and guess not in st.session_state.footdle_guesses and not st.session_state.footdle_win_message:
-                        # --- Add user guess ---
+                st.session_state.footdle_win_message = None
+                # Don't allow guessing after win
+                if guess and guess not in st.session_state.footdle_guesses and not st.session_state.footdle_win_message and st.session_state.footdle_started:
+                    
                     st.session_state.footdle_guesses.append(guess)
                     secret = st.session_state.footdle_secret
 
@@ -388,9 +396,70 @@ def footdle_page():
                             st.session_state.footdle_win_message = "bot"
                             st.session_state.footdle_started = False
 
+        with col_restart:
+            st.markdown("<div style='margin-top: 32px;'>", unsafe_allow_html=True)
+            if st.button("Restart"):
+                st.session_state.footdle_started = False
+                st.session_state.footdle_secret = None
+                st.session_state.footdle_guesses = []
+                st.session_state.footdle_bot_guesses = []
+                st.session_state.footdle_bot_possible = None
+                st.session_state.footdle_win_message = None
+                st.rerun()
+
+            # --- WIN/LOSE MESSAGE (after input, before guesses) ---
+        if st.session_state.footdle_win_message == "user":
+            st.markdown(
+                f"""
+                <div style="width:100%;
+                            margin-top: 10px;
+                            background: #18b87a;
+                            color: #fff;
+                            font-size: 1.3em;
+                            padding: 18px 0;
+                            border-radius: 12px;
+                            font-weight: bold;
+                            text-align: center;
+                            letter-spacing: 0.01em;
+                            box-shadow: 0 8px 32px rgba(0,0,0,0.13);">
+                    🎉 YOU WIN! The player was: <span style="color:#fff700">{st.session_state.footdle_secret['Name']}</span><br>
+                    <span style="font-size:0.85em; color:#eeeeee; font-weight:normal;">
+                        Try another round or check the player’s stats!
+                    </span>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+        elif st.session_state.footdle_win_message == "bot":
+            st.markdown(
+                f"""
+                <div style="width:100%;
+                            margin-top: 10px;
+                            background: #d53c1c;
+                            color: #fff;
+                            font-size: 1.3em;
+                            padding: 18px 0;
+                            border-radius: 12px;
+                            font-weight: bold;
+                            text-align: center;
+                            letter-spacing: 0.01em;
+                            box-shadow: 0 8px 32px rgba(0,0,0,0.13);">
+                    🤖 THE COMPUTER WINS! The player was: <span style="color:#fff700">{st.session_state.footdle_secret['Name']}</span><br>
+                    <span style="font-size:0.85em; color:#eeeeee; font-weight:normal;">
+                        Try again or try Solo mode!
+                    </span>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
                 # --- game progress ---
-        st.markdown("#### Your and comp guesses")
+        coly, colc = st.columns([7, 1])  # You can tweak the ratio as needed
+
+        with coly:
+            st.markdown("**Your Guess**")
+        with colc:
+            st.markdown("**Bot's Guess**")
         # Aligned display: your guess tiles + bot guess text
         for i in reversed(range(len(st.session_state.footdle_guesses))):
             user_name = st.session_state.footdle_guesses[i]
@@ -449,77 +518,28 @@ def footdle_page():
                     bot_row["Market Value (€ mil.)"] == secret["Market Value (€ mil.)"]
                 ]
                 n_correct = sum(correct_bot)
-                bot_guess_str = f"<div style='font-weight:bold;color:#00f7ff;font-size:1.1em;'>{bot_name} ({n_correct}/6)</div>"
+                bot_guess_str = f"<div style='font-weight:bold;color:#0078ff;padding-right:50px;font-size:1.1em;'>{bot_name} ({n_correct}/6)</div>"
 
             html = f"""
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-                <div style="display:grid;grid-template-columns:110px repeat(6, 90px);gap:8px;align-items:center;">
-                    <div style="font-weight:bold;font-size:1.2em;padding-right:8px;">{user_name}</div>
-                    <div style="border:4px solid black; background:{get_bg('Position')}; border-radius:7px; height:65px; display:flex; align-items:center; justify-content:center; font-size:1.2em;">
-                        {values['Position']}
-                    </div>
-                    <div style="border:4px solid black;background:{get_bg('Age')}; border-radius:7px; height:65px;display:flex;align-items:center;justify-content:center;font-size:1.2em;">
-                        <span>{values['Age']}</span>
-                        <span style="margin-left:6px;">{arrow_html(values['Age'], secret['Age'], correct['Age'])}</span>
-                    </div>
-                    <div style="border:4px solid black;background:{get_bg('Country')}; border-radius:7px; height:65px;display:flex;align-items:center;justify-content:center;font-size:1.2em;">{values['Country']}</div>
-                    <div style="border:4px solid black;background:{get_bg('Club')}; border-radius:7px; height:65px;display:flex;align-items:center;justify-content:center;font-size:1.2em;">{values['Club']}</div>
-                    <div style="border:4px solid black;background:{get_bg('League')}; border-radius:7px; height:65px;display:flex;align-items:center;justify-content:center;font-size:1.2em;">{values['League']}</div>
-                    <div style="border:4px solid black;background:{get_bg('Market Value (€ mil.)')}; border-radius:7px; height:65px;display:flex;align-items:center;justify-content:center;font-size:1.2em;">
-                        <span>{values['Market Value (€ mil.)']}</span>
-                        <span style="margin-left:6px;">{arrow_html(values['Market Value (€ mil.)'], secret['Market Value (€ mil.)'], correct['Market Value (€ mil.)'])}</span>
-                    </div>
-                </div>
-                <div style="min-width:180px;margin-left:30px;text-align:right;">{bot_guess_str}</div>
+               <div style="display:grid;grid-template-columns:120px repeat(6, 95px);gap:8px;align-items:center;">
+                   <div style="font-weight:bold;font-size:1.1em;padding-right:8px;">{user_name}</div>
+                      <div style="border:4px solid black; background:{get_bg('Position')}; border-radius:7px; height:65px; display:flex; align-items:center; justify-content:center;text-align: center; font-size:1.2em;">
+                           {values['Position']}
+                        </div>
+                        <div style="border:4px solid black;background:{get_bg('Age')}; border-radius:7px; height:65px;display:flex;align-items:center;justify-content:center;text-align: center;font-size:1.2em;">
+                            <span>{values['Age']}</span>
+                            <span style="margin-left:6px;">{arrow_html(values['Age'], secret['Age'], correct['Age'])}</span>
+                        </div>
+                        <div style="border:4px solid black;background:{get_bg('Country')}; border-radius:7px; height:65px;display:flex;align-items:center;justify-content:center;text-align: center;font-size:1.1em;">{values['Country']}</div>
+                        <div style="border:4px solid black;background:{get_bg('Club')}; border-radius:7px; height:65px;display:flex;align-items:center;justify-content:center;text-align: center;font-size:1.1em;">{values['Club']}</div>
+                        <div style="border:4px solid black;background:{get_bg('League')}; border-radius:7px; height:65px;display:flex;align-items:center;justify-content:center;text-align: center;font-size:1.1em;">{values['League']}</div>
+                        <div style="border:4px solid black;background:{get_bg('Market Value (€ mil.)')}; border-radius:7px; height:65px;display:flex;align-items:center;justify-content:center;text-align: center;font-size:1.2em;">
+                           <span>{values['Market Value (€ mil.)']}</span>
+                           <span style="margin-left:6px;">{arrow_html(values['Market Value (€ mil.)'], secret['Market Value (€ mil.)'], correct['Market Value (€ mil.)'])}</span>
+                       </div>
+                     </div>
+                 <div style="min-width:180px;margin-left:30px;text-align:right;">{bot_guess_str}</div>
             </div>
             """
-            st.markdown(html, unsafe_allow_html=True)
-
-
-        # --- WIN/LOSE MESSAGES ---
-        if st.session_state.footdle_win_message == "user":
-            st.markdown(
-                f"""
-                <div style="width:70vw;
-                            margin-left: calc(-20vw);
-                            margin-top: 20px;
-                            background: #18b87a;
-                            color: #fff;
-                            font-size: 1.3em;
-                            padding: 24px 0;
-                            border-radius: 18px;
-                            font-weight: bold;
-                            text-align: center;
-                            letter-spacing: 0.01em;
-                            box-shadow: 0 8px 32px rgba(0,0,0,0.13);">
-                    🎉 YOU WIN! The player was: <span style="color:#fff700">{st.session_state.footdle_secret['Name']}</span><br>
-                    <span style="font-size:0.85em; color:#eeeeee; font-weight:normal;">
-                        Try another round or check the player’s stats!
-                    </span>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-        elif st.session_state.footdle_win_message == "bot":
-            st.markdown(
-                f"""
-                <div style="width:70vw;
-                            margin-left: calc(-20vw);
-                            margin-top: 20px;
-                            background: #d53c1c;
-                            color: #fff;
-                            font-size: 1.3em;
-                            padding: 24px 0;
-                            border-radius: 18px;
-                            font-weight: bold;
-                            text-align: center;
-                            letter-spacing: 0.01em;
-                            box-shadow: 0 8px 32px rgba(0,0,0,0.13);">
-                    🤖 THE COMPUTER WINS! The player was: <span style="color:#fff700">{st.session_state.footdle_secret['Name']}</span><br>
-                    <span style="font-size:0.85em; color:#eeeeee; font-weight:normal;">
-                        Try again or try Solo mode!
-                    </span>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+            st.markdown(f"""<div style='display: flex; justify-content: center;'>{html}</div>""", unsafe_allow_html=True)
