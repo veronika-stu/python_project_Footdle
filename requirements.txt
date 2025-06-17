@@ -1,0 +1,12 @@
+requests
+pandas
+datetime
+plotly.express
+parser
+re
+BeautifulSoup
+streamlit
+wikipedia
+warnings
+time
+numpy
