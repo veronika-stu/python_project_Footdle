@@ -10,16 +10,16 @@ if 'page' not in st.session_state:
 
 with st.sidebar:
     st.title("Navigation")
-    if st.button("Home"):
+    if st.button("🏡 Home"):
         st.session_state.page = 'Home'
         st.rerun()
-    if st.button("Player Info"):
+    if st.button("👤 Player Info"):
         st.session_state.page = 'Player Info'
         st.rerun()
-    if st.button('FootDle'):
+    if st.button('⚽ FootDle'):
         st.session_state.page = 'FootDle'
         st.rerun()
-    if st.button("Players List"): 
+    if st.button("📋 Players List"): 
         st.session_state.page = 'Players List'
         st.rerun()
 
@@ -27,13 +27,15 @@ with st.sidebar:
 # Home Page
 # ----------------------------
 if st.session_state.page == 'Home':
-    st.title("Welcome to the Football App")
+    st.title("Welcome to the Football App 🧤")
     st.markdown("---")
     st.markdown("""
-        Welcome to the ultimate hub for football lovers!  
-        Explore club stats, player profiles, or play our football-themed guessing game.
-        Whether you're a die-hard fan or just curious about the beautiful game, there's something here for everyone.
-        Use the navigation bar on the left or choose an option below to get started:
+        Welcome to the **ultimate playground for football fans**!  
+                
+        Dive into player stats, explore club profiles, or test your knowledge in our football-themed guessing game.
+        Whether you're a passionate supporter or just discovering the beautiful game, there's something here for you.
+                
+        Use the navigation bar on the left — or pick an option below to kick things off! ⚽
     """)
     col1, col2, col3 = st.columns(3)
     with col1:
