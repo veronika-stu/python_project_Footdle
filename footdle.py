@@ -3,11 +3,11 @@ from scrape import get_players
 
 def footdle_page():
     st.title("Footdle - Guess the Player!")
-    # Mode selection state
+    
     if "footdle_mode" not in st.session_state:
         st.session_state.footdle_mode = None
 
-    # Mode select page
+   
     if st.session_state.footdle_mode is None:
         st.markdown("""
         Welcome to **Footdle**!  
@@ -81,7 +81,7 @@ def footdle_page():
 
 
 
-    # Mode back button
+   
     if st.button("⬅ Back to mode select"):
         st.session_state.footdle_mode = None
         st.session_state.footdle_started = False
@@ -93,7 +93,7 @@ def footdle_page():
 
     # === SOLO MODE ===
     if st.session_state.footdle_mode == "Solo":
-        # State setup
+        
         if "footdle_started" not in st.session_state:
             st.session_state.footdle_started = False
         if "footdle_secret" not in st.session_state:
@@ -105,7 +105,7 @@ def footdle_page():
         if "footdle_win_message" not in st.session_state:
             st.session_state.footdle_win_message = False
 
-        # Start button
+      
         if not st.session_state.footdle_started:
             if st.button("Start"):
                 player_df = get_players()
@@ -133,7 +133,7 @@ def footdle_page():
             st.markdown("<div style='margin-top: 32px;'>", unsafe_allow_html=True)
             if st.button("Guess"):
                 # Don't allow guessing after giving up or after win
-                if guess and guess not in st.session_state.footdle_guesses and not st.session_state.footdle_gave_up_message and st.session_state.footdle_started:
+                if guess and guess not in st.session_state.footdle_guesses and not st.session_state.footdle_gave_up_message and not st.session_state.footdle_win_message and st.session_state.footdle_started:
                     st.session_state.footdle_guesses.append(guess)
                     st.rerun()
         with col3:
@@ -177,7 +177,7 @@ def footdle_page():
                 unsafe_allow_html=True
             )
 
-        # Headers row
+    
         headers_html = """
         <div style="display:grid;grid-template-columns:160px repeat(6, 120px);gap:18px;margin-bottom:2px;">
             <div></div>
@@ -199,7 +199,7 @@ def footdle_page():
         <svg width="28" height="28" style="vertical-align:middle;opacity:0.7;transform: rotate(180deg);" viewBox="0 0 16 16"><path fill="black" d="M8 4l4 8H4z"/></svg>
         """
 
-        # Guess grid and win logic
+        
         win = False
         for idx, guessed_name in enumerate(reversed(st.session_state.footdle_guesses)):
             guess_row = player_df[player_df["Name"] == guessed_name].iloc[0]
@@ -255,7 +255,7 @@ def footdle_page():
             """
             st.markdown(f"""<div style='display: flex; justify-content: center;'>{html}</div>""", unsafe_allow_html=True)
 
-            # Win logic (but not after Give Up)
+            
             if all(correct.values()) and not st.session_state.footdle_gave_up_message and st.session_state.footdle_started:
                 st.session_state.footdle_win_message = True
                 st.session_state.footdle_started = False
@@ -289,6 +289,36 @@ def footdle_page():
 
     # === COMPUTER MODE ===
     elif st.session_state.footdle_mode == "Computer":
+
+        # difficulty selector
+        if not st.session_state.get("footdle_started", False):
+            st.markdown("### 🤖 Select Difficulty")
+
+            selected = st.select_slider(
+                label="",
+                options=["Noob", "Easy", "Medium", "Hard", "Impossible"],
+                value=st.session_state.get("footdle_difficulty", "Medium"),
+                help="Pick how smart the computer is."
+            )
+
+            if st.session_state.get("footdle_difficulty") != selected:
+                st.session_state.footdle_difficulty = selected
+                st.rerun()
+
+            difficulty_explanations = {
+                "Noob": "🟢 Completely random guesses.",
+                "Easy": "🟡 Learns, 50% false positives.",
+                "Medium": "🟠 Learns, 25% false positives.",
+                "Hard": "🔴 Learns, 10% false positives.",
+                "Impossible": "⚫ Perfect logic, no false positives."
+            }
+
+            st.markdown(f"""
+            <div style="margin-top:-10px; font-size: 20px; text-align: center;">
+                <strong>{selected}</strong>: {difficulty_explanations[selected]}
+            </div>
+            """, unsafe_allow_html=True)
+
         if "footdle_started" not in st.session_state:
             st.session_state.footdle_started = False
         if "footdle_secret" not in st.session_state:
@@ -329,72 +359,81 @@ def footdle_page():
             st.markdown("<div style='margin-top: 32px;'>", unsafe_allow_html=True)
             if st.button("Guess"):
                 st.session_state.footdle_win_message = None
-                # Don't allow guessing after win
+                
                 if guess and guess not in st.session_state.footdle_guesses and not st.session_state.footdle_win_message and st.session_state.footdle_started:
                     
                     st.session_state.footdle_guesses.append(guess)
                     secret = st.session_state.footdle_secret
 
-                        # --- Check if user wins
+                       
                     if guess == secret["Name"]:
                         st.session_state.footdle_win_message = "user"
                         st.session_state.footdle_started = False
 
-                        # --- Bot's Turn: Guess using only its own past feedback
-                        # 1. On first turn, bot_possible is all players
-                    if st.session_state.footdle_bot_possible is None or len(st.session_state.footdle_bot_guesses) == 0:
-                        bot_possible = player_df.copy()
+                      
+                    difficulty = st.session_state.get("footdle_difficulty", "Medium")
+                    contamination_map = {
+                        "Noob": 100,
+                        "Easy": 50,
+                        "Medium": 25,
+                        "Hard": 10,
+                        "Impossible": 0
+                    }
+                    contam_percent = contamination_map.get(difficulty, 25)
+
+                    if difficulty == "Noob":
+                        all_unguessed = player_df[~player_df["Name"].isin(st.session_state.footdle_bot_guesses)]
+                        if not all_unguessed.empty:
+                            bot_guess_row = all_unguessed.sample(1).iloc[0]
+                            bot_guess = bot_guess_row["Name"]
+                            st.session_state.footdle_bot_guesses.append(bot_guess)
+                            if bot_guess == secret["Name"]:
+                                st.session_state.footdle_win_message = "bot"
+                                st.session_state.footdle_started = False
                     else:
-                         bot_possible = st.session_state.footdle_bot_possible.copy()
+                        if st.session_state.footdle_bot_possible is None or len(st.session_state.footdle_bot_guesses) == 0:
+                            bot_possible = player_df.copy()
+                        else:
+                            bot_possible = st.session_state.footdle_bot_possible.copy()
 
-                        # 2. Remove already guessed
-                    bot_possible = bot_possible[~bot_possible["Name"].isin(st.session_state.footdle_bot_guesses)]
+                        bot_possible = bot_possible[~bot_possible["Name"].isin(st.session_state.footdle_bot_guesses)]
 
-                        # 3. Make a guess if possible, but "contaminate" possible set with 25% random wrong players
-                    if len(bot_possible) > 0:
-                            # Get feedback for bot's last guess if exists (bot is making next guess based on previous guess)
                         if len(st.session_state.footdle_bot_guesses) > 0:
-                             last_bot_guess_row = player_df[player_df["Name"] == st.session_state.footdle_bot_guesses[-1]].iloc[0]
-                             feedback = {
-                                  "Position": last_bot_guess_row["Position"] == secret["Position"],
-                                  "Age": last_bot_guess_row["Age"] == secret["Age"],
-                                  "Country": last_bot_guess_row["Country"] == secret["Country"],
-                                  "Club": last_bot_guess_row["Club"] == secret["Club"],
-                                  "League": last_bot_guess_row["League"] == secret["League"],
-                                   "Market Value (€ mil.)": last_bot_guess_row["Market Value (€ mil.)"] == secret["Market Value (€ mil.)"]
-                             }
-                                # Filter strictly
-                             for col, is_correct in feedback.items():
-                                 if is_correct:
-                                     bot_possible = bot_possible[bot_possible[col] == secret[col]]
+                            last_bot_guess_row = player_df[player_df["Name"] == st.session_state.footdle_bot_guesses[-1]].iloc[0]
+                            feedback = {
+                                "Position": last_bot_guess_row["Position"] == secret["Position"],
+                                "Age": last_bot_guess_row["Age"] == secret["Age"],
+                                "Country": last_bot_guess_row["Country"] == secret["Country"],
+                                "Club": last_bot_guess_row["Club"] == secret["Club"],
+                                "League": last_bot_guess_row["League"] == secret["League"],
+                                "Market Value (€ mil.)": last_bot_guess_row["Market Value (€ mil.)"] == secret["Market Value (€ mil.)"]
+                            }
+                            for col, is_correct in feedback.items():
+                                if is_correct:
+                                    bot_possible = bot_possible[bot_possible[col] == secret[col]]
 
-                            # Now contaminate the bot's pool
-                        n_extra = max(1, int(0.25 * len(bot_possible)))
-                        all_possible_names = set(player_df["Name"].tolist())
-                        current_possible_names = set(bot_possible["Name"].tolist())
-                        already_guessed = set(st.session_state.footdle_bot_guesses)
-                        excluded_names = current_possible_names | already_guessed
+                        if contam_percent > 0:
+                            n_extra = max(1, int((contam_percent / 100) * len(bot_possible)))
+                            all_names = set(player_df["Name"])
+                            current_possible_names = set(bot_possible["Name"])
+                            already_guessed = set(st.session_state.footdle_bot_guesses)
+                            excluded_names = current_possible_names | already_guessed
 
-                        false_positives_df = player_df[~player_df["Name"].isin(excluded_names)]
-                        if len(false_positives_df) > 0:
-                            add_df = false_positives_df.sample(n=min(n_extra, len(false_positives_df)))
-                            bot_possible = pd.concat([bot_possible, add_df], ignore_index=True)
+                            false_positives_df = player_df[~player_df["Name"].isin(excluded_names)]
+                            if not false_positives_df.empty:
+                                add_df = false_positives_df.sample(n=min(n_extra, len(false_positives_df)))
+                                bot_possible = pd.concat([bot_possible, add_df], ignore_index=True)
 
-                            # Remove duplicates just in case
                         bot_possible = bot_possible.drop_duplicates(subset="Name").reset_index(drop=True)
+                        if len(bot_possible) > 0:
+                            bot_guess_row = bot_possible.sample(1).iloc[0]
+                            bot_guess = bot_guess_row["Name"]
+                            st.session_state.footdle_bot_guesses.append(bot_guess)
+                            st.session_state.footdle_bot_possible = bot_possible
 
-                            # --- Pick random guess from contaminated pool
-                        bot_guess_row = bot_possible.sample(1).iloc[0]
-                        bot_guess = bot_guess_row["Name"]
-                        st.session_state.footdle_bot_guesses.append(bot_guess)
-
-                            # Store the contaminated pool for next round
-                        st.session_state.footdle_bot_possible = bot_possible
-
-                            # --- Bot win logic
-                        if bot_guess == secret["Name"]:
-                            st.session_state.footdle_win_message = "bot"
-                            st.session_state.footdle_started = False
+                            if bot_guess == secret["Name"]:
+                                st.session_state.footdle_win_message = "bot"
+                                st.session_state.footdle_started = False
 
         with col_restart:
             st.markdown("<div style='margin-top: 32px;'>", unsafe_allow_html=True)
@@ -407,7 +446,7 @@ def footdle_page():
                 st.session_state.footdle_win_message = None
                 st.rerun()
 
-            # --- WIN/LOSE MESSAGE (after input, before guesses) ---
+        # --- win/lose/draw message ---
         if st.session_state.footdle_win_message == "user":
             st.markdown(
                 f"""
@@ -454,13 +493,13 @@ def footdle_page():
             )
 
                 # --- game progress ---
-        coly, colc = st.columns([7, 1])  # You can tweak the ratio as needed
+        coly, colc = st.columns([7, 1])  
 
         with coly:
             st.markdown("**Your Guess**")
         with colc:
             st.markdown("**Bot's Guess**")
-        # Aligned display: your guess tiles + bot guess text
+        
         for i in reversed(range(len(st.session_state.footdle_guesses))):
             user_name = st.session_state.footdle_guesses[i]
             user_row = player_df[player_df["Name"] == user_name].iloc[0]
