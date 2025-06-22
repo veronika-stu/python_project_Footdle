@@ -9,6 +9,7 @@ Our project was designed with the intention to entertain the user with a game of
 To set up and run the project locally, the steps explained below need to be followed.
 
  **1. Clone or download the repository**
+ The `__pycache__` files do not need to be downloaded (preferrably deleted if done so).
 
  **2. Check your version of Python (Python 3.10 or greater required)**
 
@@ -29,6 +30,7 @@ The data used for this project is sourced from two platforms, [Wikipedia](https:
 Footdle is a football-themed guessing game where your goal is to identify a hidden player from a list of the top 100 most valuable footballers, which are (re)scraped every hour. Each time you guess a player, the game gives you feedback on how close you are in terms of various attributes like position, age, nationality, club, league, and market value. Correct guesses light up in green, incorrect ones in red, arrows show whether the hidden player's attribute is higher or lower than your guess.
 
 **Against computer mode**
+
 In computer mode, competitive edge is added. Before the game starts, you choose a difficulty level. The difiiculty level determines with what probability the bot makes a contaminated guess, i.e. with what probability the bot chooses a false positive as their guess (choosing an incorrect player even when it has enough information to narrow it down). After every guess you make, the bot takes its turn. The game ends when either you or the computer identifies the secret player, or both do on the same turn, resulting in a draw.
 
 Authors: Jakub Čejchan, Veronika Stuchlíková
