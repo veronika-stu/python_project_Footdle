@@ -32,7 +32,7 @@ def footdle_page():
         st.markdown("""
         1. **Type or choose a player** from the dropdown and press **Guess**.  
         2. **Repeat** until you guess the correct player.  
-        3. If you're stuck, click **Give Up** to reveal the answer.  
+        3. If you're stuck, click **Give Up** (*Solo mode*) or get beaten (*Computer mode*) to reveal the answer. 
         4. Want a fresh challenge? Click **Restart** – but note: you won’t see the current answer!
         """)
 
@@ -153,7 +153,7 @@ def footdle_page():
 
         secret = st.session_state.footdle_secret
 
-        # Give Up message block
+        #message block
         if st.session_state.footdle_gave_up_message:
             answer = secret["Name"] if secret else "unknown"
             st.markdown(
@@ -176,6 +176,8 @@ def footdle_page():
                 """,
                 unsafe_allow_html=True
             )
+
+
 
     
         headers_html = """
@@ -318,6 +320,8 @@ def footdle_page():
                 <strong>{selected}</strong>: {difficulty_explanations[selected]}
             </div>
             """, unsafe_allow_html=True)
+            st.markdown("   ")
+            st.markdown("   ")
 
         if "footdle_started" not in st.session_state:
             st.session_state.footdle_started = False
@@ -333,18 +337,39 @@ def footdle_page():
             st.session_state.footdle_win_message = None
 
         if not st.session_state.footdle_started:
-            if st.button("Start 1v1"):
-                st.session_state.footdle_win_message = None
-                player_df = get_players()
-                st.session_state.footdle_player_df = player_df
-                secret_row = player_df.sample(1).iloc[0]
-                st.session_state.footdle_secret = secret_row.to_dict()
-                st.session_state.footdle_guesses = []
-                st.session_state.footdle_bot_possible = player_df.copy()
-                st.session_state.footdle_bot_guesses = []
-                st.session_state.footdle_started = True
-                st.rerun()
+            col1, col2, col3 = st.columns([2.2, 1, 2])
+            with col2:
+                if st.button("Start 1v1"):
+                    st.session_state.footdle_win_message = None
+                    player_df = get_players()
+                    st.session_state.footdle_player_df = player_df
+                    secret_row = player_df.sample(1).iloc[0]
+                    st.session_state.footdle_secret = secret_row.to_dict()
+                    st.session_state.footdle_guesses = []
+                    st.session_state.footdle_bot_possible = player_df.copy()
+                    st.session_state.footdle_bot_guesses = []
+                    st.session_state.footdle_started = True
+                    st.rerun()
+
+            st.markdown("---")
+            st.markdown("### 🤖 Difficulty Levels Explained")
+            st.markdown("""
+            Choosing a difficulty determines how accurate the bot's guesses are. Here's how it works:
+
+            - 🟢 **Noob** – **100% random**: The bot guesses completely randomly.  
+            - 🟡 **Easy** – **50% noise**: Half of its guesses are wrong, even if it knows better.  
+            - 🟠 **Medium** – **25% noise**: Decent logic, but still makes 1 in 4 guesses incorrectly.  
+            - 🔴 **Hard** – **10% noise**: Very smart – only 1 in 10 guesses are contaminated.  
+            - ⚫ **Impossible** – **0% noise**: Perfect logic. The bot only guesses when it's certain.
+            """)
+            st.markdown(
+                "<sub> *Note:* **Noise** means how often the bot includes misleading players in its guess pool, making it harder for it to win.</sub>",
+                unsafe_allow_html=True
+            )
+
             st.stop()
+
+
         
         player_df = st.session_state.footdle_player_df
         player_names = sorted(player_df["Name"].tolist())

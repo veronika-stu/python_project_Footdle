@@ -92,3 +92,21 @@ elif st.session_state.page == 'Players List':
     st.title("Top 100 Most Valuable Players")
     df = get_players()
     st.dataframe(df, hide_index=True)
+
+    st.markdown("---")
+    st.markdown("### 📌 Position Abbreviations Explained")
+    st.markdown("""
+    Football positions are shown using standard abbreviations. Here's what each one means:
+
+    - **GK**: Goalkeeper  
+    - **LB**: Left-Back  
+    - **RB**: Right-Back  
+    - **CB**: Centre-Back  
+    - **CDM**: Defensive Midfield  
+    - **CM**: Central Midfield  
+    - **CAM**: Attacking Midfield  
+    - **LW**: Left Winger  
+    - **RW**: Right Winger  
+    - **ST**: Centre-Forward (Striker)  
+    - **CF**: Second Striker  
+    """)
