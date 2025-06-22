@@ -9,6 +9,7 @@ Our project was designed with the intention to entertain the user with a game of
 To set up and run the project locally, the steps explained below need to be followed.
 
  **1. Clone or download the repository**
+ 
  The `__pycache__` files do not need to be downloaded (preferrably deleted if done so).
 
  **2. Check your version of Python (Python 3.10 or greater required)**
