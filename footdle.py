@@ -307,10 +307,10 @@ def footdle_page():
 
             difficulty_explanations = {
                 "Noob": "🟢 Completely random guesses.",
-                "Easy": "🟡 Learns, 50% false positives.",
-                "Medium": "🟠 Learns, 25% false positives.",
-                "Hard": "🔴 Learns, 10% false positives.",
-                "Impossible": "⚫ Perfect logic, no false positives."
+                "Easy": "🟡 Bot has some logic, yet it is really limited",
+                "Medium": "🟠 Bot has a logic of an average football fan",
+                "Hard": "🔴 Bot has a logic of a football fanatic",
+                "Impossible": "⚫ Bot is a machine, it almost never loses"
             }
 
             st.markdown(f"""
@@ -359,18 +359,16 @@ def footdle_page():
             st.markdown("<div style='margin-top: 32px;'>", unsafe_allow_html=True)
             if st.button("Guess"):
                 st.session_state.footdle_win_message = None
-                
+
                 if guess and guess not in st.session_state.footdle_guesses and not st.session_state.footdle_win_message and st.session_state.footdle_started:
-                    
+
                     st.session_state.footdle_guesses.append(guess)
                     secret = st.session_state.footdle_secret
 
-                       
-                    if guess == secret["Name"]:
-                        st.session_state.footdle_win_message = "user"
-                        st.session_state.footdle_started = False
+                    user_correct = guess == secret["Name"]
+                    bot_correct = False
+                    bot_guess = None
 
-                      
                     difficulty = st.session_state.get("footdle_difficulty", "Medium")
                     contamination_map = {
                         "Noob": 100,
@@ -387,9 +385,7 @@ def footdle_page():
                             bot_guess_row = all_unguessed.sample(1).iloc[0]
                             bot_guess = bot_guess_row["Name"]
                             st.session_state.footdle_bot_guesses.append(bot_guess)
-                            if bot_guess == secret["Name"]:
-                                st.session_state.footdle_win_message = "bot"
-                                st.session_state.footdle_started = False
+                            bot_correct = bot_guess == secret["Name"]
                     else:
                         if st.session_state.footdle_bot_possible is None or len(st.session_state.footdle_bot_guesses) == 0:
                             bot_possible = player_df.copy()
@@ -418,7 +414,6 @@ def footdle_page():
                             current_possible_names = set(bot_possible["Name"])
                             already_guessed = set(st.session_state.footdle_bot_guesses)
                             excluded_names = current_possible_names | already_guessed
-
                             false_positives_df = player_df[~player_df["Name"].isin(excluded_names)]
                             if not false_positives_df.empty:
                                 add_df = false_positives_df.sample(n=min(n_extra, len(false_positives_df)))
@@ -430,10 +425,18 @@ def footdle_page():
                             bot_guess = bot_guess_row["Name"]
                             st.session_state.footdle_bot_guesses.append(bot_guess)
                             st.session_state.footdle_bot_possible = bot_possible
+                            bot_correct = bot_guess == secret["Name"]
 
-                            if bot_guess == secret["Name"]:
-                                st.session_state.footdle_win_message = "bot"
-                                st.session_state.footdle_started = False
+                    # === WIN OUTCOME CHECK ===
+                    if user_correct and bot_correct:
+                        st.session_state.footdle_win_message = "draw"
+                    elif user_correct:
+                        st.session_state.footdle_win_message = "user"
+                    elif bot_correct:
+                        st.session_state.footdle_win_message = "bot"
+
+                    if st.session_state.footdle_win_message:
+                        st.session_state.footdle_started = False
 
         with col_restart:
             st.markdown("<div style='margin-top: 32px;'>", unsafe_allow_html=True)
@@ -491,15 +494,36 @@ def footdle_page():
                 """,
                 unsafe_allow_html=True
             )
+        elif st.session_state.footdle_win_message == "draw":
+            st.markdown(
+                f"""
+                <div style="width:100%;
+                            margin-top: 10px;
+                            background: #ff9f1c;
+                            color: #fff;
+                            font-size: 1.3em;
+                            padding: 18px 0;
+                            border-radius: 12px;
+                            font-weight: bold;
+                            text-align: center;
+                            letter-spacing: 0.01em;
+                            box-shadow: 0 8px 32px rgba(0,0,0,0.13);">
+                    🤝 IT'S A DRAW! Both guessed: <span style="color:#fff700">{st.session_state.footdle_secret['Name']}</span><br>
+                    <span style="font-size:0.85em; color:#eeeeee; font-weight:normal;">
+                        That was intense. Want to go again?
+                    </span>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
-                # --- game progress ---
-        coly, colc = st.columns([7, 1])  
-
+        # --- game progress ---
+        coly, colc = st.columns([7, 1])
         with coly:
             st.markdown("**Your Guess**")
         with colc:
             st.markdown("**Bot's Guess**")
-        
+
         for i in reversed(range(len(st.session_state.footdle_guesses))):
             user_name = st.session_state.footdle_guesses[i]
             user_row = player_df[player_df["Name"] == user_name].iloc[0]
@@ -523,12 +547,8 @@ def footdle_page():
             }
             def get_bg(col): return "#3dcc4a" if correct[col] else "#df2222"
 
-            arrow_up_svg = """
-            <svg width="18" height="18" style="vertical-align:middle;opacity:0.7;" viewBox="0 0 16 16"><path fill="black" d="M8 4l4 8H4z"/></svg>
-            """
-            arrow_down_svg = """
-            <svg width="18" height="18" style="vertical-align:middle;opacity:0.7;transform: rotate(180deg);" viewBox="0 0 16 16"><path fill="black" d="M8 4l4 8H4z"/></svg>
-            """
+            arrow_up_svg = """<svg width="18" height="18" style="vertical-align:middle;opacity:0.7;" viewBox="0 0 16 16"><path fill="black" d="M8 4l4 8H4z"/></svg>"""
+            arrow_down_svg = """<svg width="18" height="18" style="vertical-align:middle;opacity:0.7;transform: rotate(180deg);" viewBox="0 0 16 16"><path fill="black" d="M8 4l4 8H4z"/></svg>"""
 
             def arrow_html(guess, real, correct):
                 if correct:
@@ -561,10 +581,10 @@ def footdle_page():
 
             html = f"""
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-               <div style="display:grid;grid-template-columns:120px repeat(6, 95px);gap:8px;align-items:center;">
-                   <div style="font-weight:bold;font-size:1.1em;padding-right:8px;">{user_name}</div>
-                      <div style="border:4px solid black; background:{get_bg('Position')}; border-radius:7px; height:65px; display:flex; align-items:center; justify-content:center;text-align: center; font-size:1.2em;">
-                           {values['Position']}
+            <div style="display:grid;grid-template-columns:120px repeat(6, 95px);gap:8px;align-items:center;">
+                <div style="font-weight:bold;font-size:1.1em;padding-right:8px;">{user_name}</div>
+                    <div style="border:4px solid black; background:{get_bg('Position')}; border-radius:7px; height:65px; display:flex; align-items:center; justify-content:center;text-align: center; font-size:1.2em;">
+                        {values['Position']}
                         </div>
                         <div style="border:4px solid black;background:{get_bg('Age')}; border-radius:7px; height:65px;display:flex;align-items:center;justify-content:center;text-align: center;font-size:1.2em;">
                             <span>{values['Age']}</span>
@@ -574,11 +594,11 @@ def footdle_page():
                         <div style="border:4px solid black;background:{get_bg('Club')}; border-radius:7px; height:65px;display:flex;align-items:center;justify-content:center;text-align: center;font-size:1.1em;">{values['Club']}</div>
                         <div style="border:4px solid black;background:{get_bg('League')}; border-radius:7px; height:65px;display:flex;align-items:center;justify-content:center;text-align: center;font-size:1.1em;">{values['League']}</div>
                         <div style="border:4px solid black;background:{get_bg('Market Value (€ mil.)')}; border-radius:7px; height:65px;display:flex;align-items:center;justify-content:center;text-align: center;font-size:1.2em;">
-                           <span>{values['Market Value (€ mil.)']}</span>
-                           <span style="margin-left:6px;">{arrow_html(values['Market Value (€ mil.)'], secret['Market Value (€ mil.)'], correct['Market Value (€ mil.)'])}</span>
-                       </div>
-                     </div>
-                 <div style="min-width:180px;margin-left:30px;text-align:right;">{bot_guess_str}</div>
+                        <span>{values['Market Value (€ mil.)']}</span>
+                        <span style="margin-left:6px;">{arrow_html(values['Market Value (€ mil.)'], secret['Market Value (€ mil.)'], correct['Market Value (€ mil.)'])}</span>
+                    </div>
+                    </div>
+                <div style="min-width:180px;margin-left:30px;text-align:right;">{bot_guess_str}</div>
             </div>
             """
             st.markdown(f"""<div style='display: flex; justify-content: center;'>{html}</div>""", unsafe_allow_html=True)
