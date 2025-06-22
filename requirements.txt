@@ -10,3 +10,4 @@ wikipedia
 warnings
 time
 numpy
+plotly

@@ -11,3 +11,4 @@ import wikipedia
 import warnings as warnings
 import time
 import numpy as np
+import plotly.express as px

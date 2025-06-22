@@ -1,6 +1,8 @@
 from packages import st, pd
+from packages import px
 from scrape import get_players, get_wikipedia_image, POSITION_MAP, convert_market_value, CLUB_TO_LEAGUE
 from footdle import footdle_page
+from playerinfo import show_players_page
 
 # ----------------------------
 # Sidebar Navigation
@@ -89,24 +91,4 @@ elif st.session_state.page == 'FootDle':
 # Players Page
 # ----------------------------
 elif st.session_state.page == 'Players List':
-    st.title("Top 100 Most Valuable Players")
-    df = get_players()
-    st.dataframe(df, hide_index=True)
-
-    st.markdown("---")
-    st.markdown("### 📌 Position Abbreviations Explained")
-    st.markdown("""
-    Football positions are shown using standard abbreviations. Here's what each one means:
-
-    - **GK**: Goalkeeper  
-    - **LB**: Left-Back  
-    - **RB**: Right-Back  
-    - **CB**: Centre-Back  
-    - **CDM**: Defensive Midfield  
-    - **CM**: Central Midfield  
-    - **CAM**: Attacking Midfield  
-    - **LW**: Left Winger  
-    - **RW**: Right Winger  
-    - **ST**: Centre-Forward (Striker)  
-    - **CF**: Second Striker  
-    """)
+    show_players_page()
