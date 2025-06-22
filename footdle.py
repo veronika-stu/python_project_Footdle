@@ -120,13 +120,15 @@ def footdle_page():
             st.stop()
 
         player_df = st.session_state.get("footdle_player_df", get_players())
-        player_names = sorted(player_df["Name"].tolist())
+        #player_names = sorted(player_df["Name"].tolist())
+        guessed_names = st.session_state.footdle_guesses
+        available_players = sorted([name for name in player_df["Name"].tolist() if name not in guessed_names])
 
         col1, col2, col3, col4 = st.columns([4, 1, 1, 1])
         with col1:
             guess = st.selectbox(
                 "Type or pick a player's name:",
-                options=[""] + player_names,
+                options=[""] + available_players,
                 key="footdle_select"
             )
         with col2:
@@ -366,6 +368,10 @@ def footdle_page():
                 "<sub> *Note:* **Noise** means how often the bot includes misleading players in its guess pool, making it harder for it to win.</sub>",
                 unsafe_allow_html=True
             )
+            st.markdown(
+                "<sub> *Note n.2:* In computer mode, the feature of already guessed players not appearing in the dropdown list (used in Solo mode) was not added.</sub>",
+                unsafe_allow_html=True
+            )
 
             st.stop()
 
@@ -373,6 +379,8 @@ def footdle_page():
         
         player_df = st.session_state.footdle_player_df
         player_names = sorted(player_df["Name"].tolist())
+        #guessed_names = st.session_state.footdle_guesses
+        #available_players = sorted([name for name in player_df["Name"].tolist() if name not in guessed_names])
 
 
         col_drop, col_guess,col_restart = st.columns([4, 1, 1])
