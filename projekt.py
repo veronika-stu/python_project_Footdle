@@ -34,7 +34,7 @@ if st.session_state.page == 'Home':
     st.markdown("""
         Welcome to the **ultimate playground for football fans**!  
                 
-        Dive into player stats, explore club profiles, or test your knowledge in our football-themed guessing game.
+        Dive into player stats, explore their profiles, or test your knowledge in our football-themed guessing game.
         Whether you're a passionate supporter or just discovering the beautiful game, there's something here for you.
                 
         Use the navigation bar on the left — or pick an option below to kick things off! ⚽
